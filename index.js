@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const userRoutes = require('./routes/users');
 const pinRoutes = require('./routes/pins');
+const cors = require('cors');
 
 dotenv.config();
 
@@ -11,21 +12,45 @@ const app = express();
 // pentru a putea vedea body-ul din request
 app.use(express.json());
 
-// conexiunea la MongoDB
-mongoose
-  .connect(process.env.MONGO_URL)
-  .then(() => {
-    console.log('Conectat la MongoDB!');
+// folosesc CORS
+app.use(cors());
 
-    // setez rutele
-    app.use('/api/users', userRoutes);
-    app.use('/api/pins', pinRoutes);
+// ce fac la conectare/deconectare MongoDB
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB deconectat...');
+});
+mongoose.connection.on('connected', () => {
+  console.log('Conectat la baza de date!');
+});
 
-    // pornesc serverul
-    app.listen(8800, () => {
-      console.log('Backend-ul ruleaza pe portul 8800...');
-    });
-  })
-  .catch((error) => {
+// functie de conectare la MongoDB Atlas
+const conectareMongoDb = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URL);
+  } catch (error) {
     console.log(error);
+  }
+};
+
+// setez rutele
+app.use('/api/users', userRoutes);
+app.use('/api/pins', pinRoutes);
+
+const PORT = 8800;
+
+try {
+  app.listen(PORT, () => {
+    console.log(`API listening on PORT ${PORT}`);
   });
+  // conectare la baza de date
+  conectareMongoDb();
+
+  app.get('/', (req, res) => {
+    res.send('Hey this is my API for MAPPIN running 🥳 ');
+  });
+} catch (error) {
+  console.log(error);
+}
+
+// Export the Express API
+module.exports = app;
